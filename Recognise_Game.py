@@ -11,11 +11,8 @@ class TicTacToe:
     def click_event(self, event, x, y, flags, param):
         """Mouse click event to capture points."""
         if event == cv2.EVENT_LBUTTONDOWN:
-            # Wenn alle 4 Punkte schon gesetzt sind, nichts mehr tun
             if len(self.points) >= 4:
                 return
-
-            # Map points from resized frame to original frame
             h, w, _ = self.original_frame.shape
             x_original = int(x * w / param.shape[1])
             y_original = int(y * h / param.shape[0])
@@ -23,47 +20,26 @@ class TicTacToe:
             cv2.circle(param, (x, y), 5, (0, 0, 255), -1)
             cv2.imshow("Select Grid", param)
 
-            # Show instructions for which point is being marked
-            if len(self.points) == 0:
-                print("Mark the top-left corner.")
-            elif len(self.points) == 1:
-                print("Mark the top-right corner.")
-            elif len(self.points) == 2:
-                print("Mark the bottom-right corner.")
-            elif len(self.points) == 3:
-                print("Mark the bottom-left corner.")
-            elif len(self.points) == 4:
-                print("All points are set.")
-
     def reset_points(self):
         """Reset the points to allow a new selection."""
         self.points = []
-        self.result = ["_" for _ in range(9)]  # Reset the result grid
+        self.result = ["_" for _ in range(9)]
         print("Points have been reset. Please select the corners again.")
 
     def extract_cells(self, frame):
         """Extract individual cells from the Tic-Tac-Toe grid using user-selected points."""
         rect = np.array(self.points, dtype="float32")
-
-        # Determine the width and height of the new perspective
         width = int(max(np.linalg.norm(rect[0] - rect[1]), np.linalg.norm(rect[2] - rect[3])))
         height = int(max(np.linalg.norm(rect[0] - rect[3]), np.linalg.norm(rect[1] - rect[2])))
-
         dst = np.array([
             [0, 0],
             [width - 1, 0],
             [width - 1, height - 1],
             [0, height - 1]
         ], dtype="float32")
-
         matrix = cv2.getPerspectiveTransform(rect, dst)
         warped = cv2.warpPerspective(frame, matrix, (width, height))
 
-        # Rotate the image to align properly if needed
-        #if width < height:
-        #    warped = cv2.rotate(warped, cv2.ROTATE_90_CLOCKWISE)
-
-        # Split into 3x3 cells
         cell_width = warped.shape[1] // 3
         cell_height = warped.shape[0] // 3
         cells = []
@@ -78,52 +54,81 @@ class TicTacToe:
         return cells, warped
 
     def detect_shape(self, cell):
-        """Detect if the cell contains a circle or a triangle (instead of X)."""
+        """Detect if the cell contains a circle or a triangle."""
         gray = cv2.cvtColor(cell, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-
-        # Bessere Schwellenwertsetzung und Rauschunterdrückung
         _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-        # Erstelle eine Maske, die den Randbereich der Zelle ausschließt
-        mask = np.zeros_like(thresh)
-        height, width = mask.shape
-        margin = int(min(height, width) * 0.08)  # 20% Randbereich
-
-        # Innerer Bereich der Zelle
-        mask[margin:height-margin, margin:width-margin] = thresh[margin:height-margin, margin:width-margin]
-
-        # Entferne kleine Konturen und Rauschen
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         for contour in contours:
             area = cv2.contourArea(contour)
-            if area < 500:  # Ignoriere kleine Konturen
+            if area < 500:
                 continue
-
-            # Vereinfache die Kontur auf ein Polygon mit weniger Ecken
             approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
-
-            # Dreieckserkennung: Wenn die vereinfachte Kontur 3 Ecken hat
             if len(approx) == 3:
-                return "T"  # Triangle (Dreieck)
-
-            # Kreis-Erkennung (optional für "O")
+                return "T"
             perimeter = cv2.arcLength(contour, True)
             circularity = 4 * np.pi * (area / (perimeter * perimeter)) if perimeter > 0 else 0
-
-            if circularity > 0.7 and area > 500:  # Eine Mindestfläche für den Kreis
-                return "O"  # Circle
-
-        # Wenn keine Form erkannt wurde, dann leer
+            if circularity > 0.7 and area > 500:
+                return "O"
         return "_"
 
+    def draw_grid(self, warped):
+        """Draw a 3x3 grid on the warped image."""
+        height, width = warped.shape[:2]
+        cell_width = width // 3
+        cell_height = height // 3
 
-    def update_game_state(self, cells):
-        """Detect shapes in all cells and update the game state."""
+        # Draw horizontal lines
+        for i in range(1, 3):
+            cv2.line(warped, (0, i * cell_height), (width, i * cell_height), (255, 255, 255), 2)
+
+        # Draw vertical lines
+        for i in range(1, 3):
+            cv2.line(warped, (i * cell_width, 0), (i * cell_width, height), (255, 255, 255), 2)
+
+    def mark_dead_zone(self, warped):
+        """Mark the dead zone on the warped image."""
+        height, width = warped.shape[:2]
+        cell_width = width // 3
+        cell_height = height // 3
+        margin = int(min(cell_width, cell_height) * 0.08)
+
+        overlay = warped.copy()
+
+        # Iterate through cells and mark margins
+        for i in range(3):
+            for j in range(3):
+                x_start = j * cell_width + margin
+                y_start = i * cell_height + margin
+                x_end = (j + 1) * cell_width - margin
+                y_end = (i + 1) * cell_height - margin
+
+                # Draw transparent overlay for dead zones
+                cv2.rectangle(overlay, (x_start, y_start), (x_end, y_end), (0, 0, 255), -1)
+
+        # Blend the overlay with transparency
+        alpha = 0.3  # Transparency factor
+        cv2.addWeighted(overlay, alpha, warped, 1 - alpha, 0, warped)
+
+    def update_game_state(self, cells, warped):
+        """Detect shapes in cells, update the game state, and overlay results."""
+        cell_width = warped.shape[1] // 3
+        cell_height = warped.shape[0] // 3
+
         for idx, cell in enumerate(cells):
             shape = self.detect_shape(cell)
             self.result[idx] = shape if shape else "_"
+
+            # Overlay the detected shape
+            row, col = divmod(idx, 3)
+            x_center = int(col * cell_width + cell_width / 2)
+            y_center = int(row * cell_height + cell_height / 2)
+
+            if shape == "O":
+                cv2.putText(warped, "O", (x_center - 15, y_center + 15), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 255, 0), 2)
+            elif shape == "T":
+                cv2.putText(warped, "T", (x_center - 15, y_center + 15), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 2)
 
     def get_current_board(self):
         """Return the current game board."""
@@ -136,21 +141,15 @@ class TicTacToe:
                 break
 
             self.original_frame = frame.copy()
-
-            # Resize the frame for a larger display window
             resized_frame = cv2.resize(self.original_frame, (960, 720))
-
-            # Let the user select the grid points
             cv2.imshow("Select Grid", resized_frame)
             cv2.setMouseCallback("Select Grid", self.click_event, resized_frame)
 
-            # Wait until 4 points are selected
             while len(self.points) < 4:
                 ret, frame = self.cap.read()
                 if not ret:
                     break
-                self.original_frame = frame.copy()
-                resized_frame = cv2.resize(self.original_frame, (960, 720))
+                resized_frame = cv2.resize(frame, (960, 720))
                 for point in self.points:
                     scaled_point = (int(point[0] * resized_frame.shape[1] / frame.shape[1]),
                                     int(point[1] * resized_frame.shape[0] / frame.shape[0]))
@@ -158,28 +157,21 @@ class TicTacToe:
                 cv2.imshow("Select Grid", resized_frame)
                 cv2.waitKey(1)
 
-            # Extract cells using the selected points
             cells, warped = self.extract_cells(self.original_frame)
-            self.update_game_state(cells)
-
-            # Display the result in the console
-            current_board = self.get_current_board()
-            for row in current_board:
-                print(row)
-            print("\n")
-
-            # Show warped grid
+            self.update_game_state(cells, warped)
+            self.draw_grid(warped)
+            self.mark_dead_zone(warped)
             cv2.imshow("Warped Grid", warped)
 
-            # Handle key press for resetting points or quitting
             key = cv2.waitKey(1) & 0xFF
-            if key == ord('q'):  # Press 'q' to quit
+            if key == ord('q'):
                 break
-            elif key == ord('r'):  # Press 'r' to reset the points
+            elif key == ord('r'):
                 self.reset_points()
 
         self.cap.release()
         cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     tictactoe_game = TicTacToe()
