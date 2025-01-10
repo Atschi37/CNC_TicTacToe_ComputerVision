@@ -60,8 +60,8 @@ class TicTacToe:
         warped = cv2.warpPerspective(frame, matrix, (width, height))
 
         # Rotate the image to align properly if needed
-        if width < height:
-            warped = cv2.rotate(warped, cv2.ROTATE_90_CLOCKWISE)
+        #if width < height:
+        #    warped = cv2.rotate(warped, cv2.ROTATE_90_CLOCKWISE)
 
         # Split into 3x3 cells
         cell_width = warped.shape[1] // 3
@@ -78,38 +78,46 @@ class TicTacToe:
         return cells, warped
 
     def detect_shape(self, cell):
-        """Detect if the cell contains a circle or an X."""
+        """Detect if the cell contains a circle or a triangle (instead of X)."""
         gray = cv2.cvtColor(cell, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
         # Bessere Schwellenwertsetzung und Rauschunterdrückung
         _, thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
 
+        # Erstelle eine Maske, die den Randbereich der Zelle ausschließt
+        mask = np.zeros_like(thresh)
+        height, width = mask.shape
+        margin = int(min(height, width) * 0.08)  # 20% Randbereich
+
+        # Innerer Bereich der Zelle
+        mask[margin:height-margin, margin:width-margin] = thresh[margin:height-margin, margin:width-margin]
+
         # Entferne kleine Konturen und Rauschen
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         for contour in contours:
             area = cv2.contourArea(contour)
-            if area < 200:  # Ignoriere kleine Konturen
+            if area < 500:  # Ignoriere kleine Konturen
                 continue
 
-            # Fit a bounding rectangle and check aspect ratio
-            x, y, w, h = cv2.boundingRect(contour)
-            aspect_ratio = w / float(h)
+            # Vereinfache die Kontur auf ein Polygon mit weniger Ecken
+            approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
 
-            # Circle detection based on circularity
+            # Dreieckserkennung: Wenn die vereinfachte Kontur 3 Ecken hat
+            if len(approx) == 3:
+                return "T"  # Triangle (Dreieck)
+
+            # Kreis-Erkennung (optional für "O")
             perimeter = cv2.arcLength(contour, True)
             circularity = 4 * np.pi * (area / (perimeter * perimeter)) if perimeter > 0 else 0
 
             if circularity > 0.7 and area > 500:  # Eine Mindestfläche für den Kreis
                 return "O"  # Circle
 
-            # Cross detection based on aspect ratio and contour shape
-            if 0.8 < aspect_ratio < 1.2 and len(contour) >= 4:
-                return "X"
-
         # Wenn keine Form erkannt wurde, dann leer
-        return None
+        return "_"
+
 
     def update_game_state(self, cells):
         """Detect shapes in all cells and update the game state."""
