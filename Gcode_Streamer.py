@@ -53,7 +53,6 @@ def set_zero_point(serial_connection):
     """Set the current position as the zero point."""
     print("Setze aktuellen Standort als Ursprung...")
     send_command(serial_connection, "G92 X0 Y0 Z0")
-    raise_toolhead(serial_connection, 15)
 
 def stream_gcode(serial_connection, file_path):
     """Stream a G-code (.ngc) file to the GRBL controller."""

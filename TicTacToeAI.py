@@ -67,19 +67,20 @@ def find_best_move(board):
 def start_game():
     game.main()
 
-threading.Thread(target=start_game).start()
-print("Game started in a separate thread.")
-while True:
-    input("Press Enter to get current board.")
-    current_board = game.get_current_board()
-    print(current_board)
-    winner, win_type = is_winner(current_board, 'T')
-    if winner:
-        print(f"'T' wins! {win_type}")
-    else:
-        winner, win_type = is_winner(current_board, 'O')
+if __name__ == "__main__":
+    threading.Thread(target=start_game).start()
+    print("Game started in a separate thread.")
+    while True:
+        input("Press Enter to get current board.")
+        current_board = game.get_current_board()
+        print(current_board)
+        winner, win_type = is_winner(current_board, 'T')
         if winner:
-            print(f"'O' wins! {win_type}")
+            print(f"'T' wins! {win_type}")
         else:
-            best_move = find_best_move(current_board)
-            print(f"Best move for 'T' is: {best_move}")
+            winner, win_type = is_winner(current_board, 'O')
+            if winner:
+                print(f"'O' wins! {win_type}")
+            else:
+                best_move = find_best_move(current_board)
+                print(f"Best move for 'T' is: {best_move}")
