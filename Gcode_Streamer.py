@@ -43,10 +43,17 @@ def unlock_grbl(serial_connection):
     print("Entsperre GRBL (Alarm Lock aufheben)...")
     send_command(serial_connection, "$X")
 
+
+def raise_toolhead(serial_connection, height=15):
+    """Raise the toolhead to a specified height."""
+    print(f"Hebe Werkzeugkopf auf {height}mm an...")
+    send_command(serial_connection, f"G0 Z{height}")
+
 def set_zero_point(serial_connection):
     """Set the current position as the zero point."""
     print("Setze aktuellen Standort als Ursprung...")
     send_command(serial_connection, "G92 X0 Y0 Z0")
+    raise_toolhead(serial_connection, 15)
 
 def stream_gcode(serial_connection, file_path):
     """Stream a G-code (.ngc) file to the GRBL controller."""
@@ -75,9 +82,6 @@ def main():
     if not port:
         return
 
-    # Pfad zur G-Code-Datei hier festlegen
-    gcode_file_path = "gcode/grid.ngc"  # Ersetze "example.gcode" durch den tatsächlichen Pfad
-
     try:
         with serial.Serial(port, baudrate=115200, timeout=1) as ser:
             print("Verbunden mit GRBL-Controller.")
@@ -96,13 +100,15 @@ def main():
                 print("[1] Ursprung setzen (G92)")
                 print("[2] G-Code streamen")
                 print("[3] Feedrate setzen")
-                print("[4] Beenden")
+                print("[4] Werkzeugkopf anheben")
+                print("[5] Beenden")
 
                 choice = input("Wählen Sie eine Option: ")
 
                 if choice == "1":
                     set_zero_point(ser)
                 elif choice == "2":
+                    gcode_file_path = input("Geben Sie den Pfad zur G-Code-Datei ein: ")
                     stream_gcode(ser, gcode_file_path)
                 elif choice == "3":
                     try:
@@ -111,6 +117,12 @@ def main():
                     except ValueError:
                         print("Ungültige Eingabe. Bitte eine Zahl eingeben.")
                 elif choice == "4":
+                    try:
+                        height = float(input("Geben Sie die Höhe ein, auf die der Werkzeugkopf angehoben werden soll: "))
+                        raise_toolhead(ser, height)
+                    except ValueError:
+                        print("Ungültige Eingabe. Bitte eine Zahl eingeben.")
+                elif choice == "5":
                     print("Beende Programm.")
                     break
                 else:
