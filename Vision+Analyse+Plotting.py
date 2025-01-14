@@ -89,7 +89,7 @@ while True:
         Gcode_Streamer.stream_gcode(ser, "gcode/scanpos.ngc")
     elif command =="6":
 
-        urrent_board = game.get_current_board()
+        current_board = game.get_current_board()
         print(current_board)
         winner, win_type = TicTacToeAI.is_winner(current_board, 'T')
         if winner:#Check if 'T' wins and draw Line to mark win

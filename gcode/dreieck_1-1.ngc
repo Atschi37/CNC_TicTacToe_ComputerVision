@@ -6,19 +6,6 @@ M3
 (Header end.)
 G21 (All units in mm)
 
-(Start cutting path id: path6-1)
-(Change tool to Default tool)
-
-G00 Z15.000000
-G00 X29.954635 Y32.036709
-
-G01 Z-1.000000 F4000.0(Penetrate)
-G01 X41.024186 Y32.036709 Z-1.000000 F4000.000000
-G00 Z15.000000
-
-(End cutting path id: path6-1)
-
-
 (Start cutting path id: path5-1)
 (Change tool to Default tool)
 
@@ -34,10 +21,24 @@ G00 Z15.000000
 (End cutting path id: path5-1)
 
 
+(Start cutting path id: path5-2)
+(Change tool to Default tool)
+
+G00 Z15.000000
+G00 X30.954585 Y32.536630
+
+G01 Z-1.000000 F4000.0(Penetrate)
+G01 X51.093848 Y32.536630 Z-1.000000 F4000.000000
+G01 X41.524215 Y49.248040 Z-1.000000
+G01 X30.954585 Y32.536630 Z-1.000000
+G00 Z15.000000
+
+(End cutting path id: path5-2)
+
+
 (Footer)
 M5
 G00 X0.0000 Y0.0000
 M2
 (Using default footer. To add your own footer create file "footer" in the output dir.)
 (end)
-%
