@@ -63,7 +63,7 @@ def draw_move(move, ser):
     Gcode_Streamer.stream_gcode(ser, "gcode/scanpos.ngc")
 
 while True:
-    command = input("[1] Ursprung setzen und Kopf heben (G92)\n [2] G-Code streamen\n [3] Werkzeugkopf anheben\n [4] Besten Zug für T berechenen\n [5] Move to Scan Position\n [6] Automatisch besten Zug ausführen\n [7] Beenden\n")
+    command = input(" [1] Ursprung setzen und Kopf heben (G92)\n [2] G-Code streamen\n [3] Werkzeugkopf anheben\n [4] Besten Zug für T berechenen\n [5] Move to Scan Position\n [6] Automatisch besten Zug ausführen\n [7] Grid+scanpos\n [8] Full Setup\n [9] Beenden\n")
     if command == "1":
         Gcode_Streamer.set_zero_point(ser)
         Gcode_Streamer.raise_toolhead(ser, 15)
@@ -105,6 +105,17 @@ while True:
                 best_move = TicTacToeAI.find_best_move(current_board)
                 print(f"Best move for 'T' is: {best_move}")
                 draw_move(best_move, ser)
+    elif command == "7":
+        Gcode_Streamer.stream_gcode(ser, "gcode/grid.ngc")
+        Gcode_Streamer.stream_gcode(ser, "gcode/scanpos.ngc")
+    elif command == "8":
+        Gcode_Streamer.set_zero_point(ser)
+        Gcode_Streamer.raise_toolhead(ser, 15)
+        Gcode_Streamer.stream_gcode(ser, "gcode/grid.ngc")
+        Gcode_Streamer.stream_gcode(ser, "gcode/scanpos.ngc")
+    elif command == "9":
+        break
+
 
 
     elif command == "7":
