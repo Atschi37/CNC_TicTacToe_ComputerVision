@@ -115,8 +115,3 @@ while True:
         Gcode_Streamer.stream_gcode(ser, "gcode/scanpos.ngc")
     elif command == "9":
         break
-
-
-
-    elif command == "7":
-        break
